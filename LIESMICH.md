@@ -1,7 +1,7 @@
 # RasPi: Raspberry-as-mqtt-broker
 
 Info &uuml;ber dieses Repository, Version 2017-11-07   
-[English Version](./Raspberry-as-mqtt-broker_README.md "English Version")
+[English Version](./README.md "English Version")
 
 Diese Repository zeigt, wie man ein Raspberry Pi als Access Point und MQTT Broker einrichtet und enth&auml;lt dazu hilfreiche Programme.   
 
