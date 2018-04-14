@@ -12,7 +12,7 @@ Program is running in an endless loop, so exit it by pressing &lt;Ctrl&gt;C.
    
 &nbsp;
 
-### MQTT_RasPi_D1mini_171106.pdf
+### MQTT_RasPi_D1mini_180324.pdf
 This German manual describes, how to 
 * setup a Raspberry Pi 3 as Access Point, 
 * install the MQTT broker Mosquitto on Raspberry Pi,
