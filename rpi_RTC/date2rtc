@@ -1,0 +1,1 @@
+i2c_ds3231_set $(date +"%y%m%d %H%M%S")

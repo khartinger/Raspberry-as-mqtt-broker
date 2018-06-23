@@ -1,4 +1,4 @@
-//_____rpi_mqtt_sub2file_log.c________________170722-180304_____
+//_____rpi_mqtt_sub2file_log.c________________170722-180330_____
 // This command line program subscribes all MQTT messages and
 // makes one file for each topic with file content is payload.
 // Every topic is added to a log-file named mqttyymm.log,

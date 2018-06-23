@@ -1,0 +1,1 @@
+sudo date +"%F %X" --set "$(i2c_ds3231_get 1)"
