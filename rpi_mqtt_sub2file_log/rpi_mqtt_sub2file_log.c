@@ -1,4 +1,4 @@
-//_____rpi_mqtt_sub2file_log.c________________170722-180330_____
+//_____rpi_mqtt_sub2file_log.c________________170722-180624_____
 // This command line program subscribes all MQTT messages and
 // makes one file for each topic with file content is payload.
 // Every topic is added to a log-file named mqttyymm.log,
@@ -27,7 +27,7 @@
 #include <mosquitto.h>            // 
 
 #define  _ANSWER_TOPIC_      "rpi_mqtt_sub2file_log"
-#define  _ANSWER_PAYLOAD_    "20180330"
+#define  _ANSWER_PAYLOAD_    "20180624"
 #define  _PATH_              "/var/www/html/mqtt/data/"
 #define  _PATH_LOG_          "/var/www/html/mqtt/log/"
 
@@ -62,11 +62,13 @@ void add2log(struct mosquitto *mosq, void *userdata,
  if(ret<0) { fclose(fp); return; }
  ret=fputs(" | ", fp);
  if(ret<0) { fclose(fp); return; }
- ret=fputs(message->topic, fp);
+ if(message->topic==NULL) ret=fputs("(null)", fp);
+ else ret=fputs(message->topic, fp);
  if(ret<0) { fclose(fp); return; }
  ret=fputs(" | ", fp);
  if(ret<0) { fclose(fp); return; }
- ret=fputs(message->payload, fp);
+ if(message->payload==NULL) ret=fputs("(null)", fp);
+ else ret=fputs(message->payload, fp);
  if(ret<0) { fclose(fp); return; }
  ret=fputs("\n", fp);
  //-----close file----------------------------------------------
@@ -126,6 +128,7 @@ void mosq_msg_callback(struct mosquitto *mosq, void *userdata,
  char filename[FILENAME_MAX];
  add2log(mosq, userdata, message);
  //=====PART 1: prepair topic name, show topic | payload========
+ if(message->topic==NULL) return;
  //-----replace blank by _, / by @------------------------------
  char* tmp=message->topic;
  while(*tmp) 
@@ -136,10 +139,9 @@ void mosq_msg_callback(struct mosquitto *mosq, void *userdata,
  }
  //-----add path------------------------------------------------
  sprintf(filename, "%s%s", _PATH_, message->topic);
- //if(prt) printf("=> %s | %s\n", filename, message->payload);
  if(prt) printf("%s | %s\n", message->topic, message->payload);
  //=====PART 2: check for empty payload (= topic deleted)=======
- if(message->payloadlen<1)
+ if((message->payloadlen<1)||(message->payload==NULL))
  {
   //-----MQTT: no payload = topic deleted -> delete file--------
   ret=deletefile(filename);
