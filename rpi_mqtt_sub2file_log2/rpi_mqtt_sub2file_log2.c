@@ -1,11 +1,11 @@
-//_____rpi_mqtt_sub2file_log2.c_______________170722-180707_____
+//_____rpi_mqtt_sub2file_log2.c_______________170722-200125_____
 // This command line program subscribes all MQTT messages and
-// makes one file for each topic with file content is payload.
+// makes one file for each topic where file content is payload.
 // Every topic is added to it's log-file named content.yymm.log,
 // where yy is the year and mm is the month e.g. test.1803.log
 // * optional args: -q = quiet (no output to screen), ip broker
 // * A topic rpi_mqtt_sub2file_log2 with payload ? generates a
-//   message with same topic and payload with a version number
+//   message with same topic and payload version number
 //   (So you can check, if the program ist running ;)
 // * Exit program by pressing <ctrl>c
 //
@@ -18,6 +18,8 @@
 // Directory2  : _PATH_LOG_ (default /var/www/html/mqtt/log/)
 // MQTT Broker : ip = _HOST_ (default 127.0.0.1)
 // 
+// Update: 2020-01-25 
+// Released into the public domain.
 #include <stdio.h>                // printf, stdin, stdout
 #include <stdlib.h>               // exit
 #include <unistd.h>               // sleep
@@ -28,7 +30,9 @@
 #include <mosquitto.h>            // 
 
 #define  _ANSWER_TOPIC_      "rpi_mqtt_sub2file_log2"
-#define  _ANSWER_PAYLOAD_    "20180707"
+#define  _ANSWER_PAYLOAD_    "20200125"
+#define  _END_               "end"
+#define  _VERSION_           "Version 20200125"
 #define  _PATH_              "/var/www/html/mqtt/data/"
 #define  _PATH_LOG_          "/var/www/html/mqtt/log/"
 
@@ -130,6 +134,7 @@ void mosq_msg_callback(struct mosquitto *mosq, void *userdata,
  //add2log(mosq, userdata, message);
  //=====PART 1: prepair topic name, show topic | payload========
  if(message->topic==NULL) return;
+ if(strlen(message->topic)<1) return;
  //-----replace blank by _, / by @------------------------------
  char* tmp=message->topic;
  while(*tmp) 
@@ -148,7 +153,7 @@ void mosq_msg_callback(struct mosquitto *mosq, void *userdata,
   //-----MQTT: no payload = topic deleted -> delete file--------
   ret=deletefile(filename);
   if(ret!=0)
-   fprintf(stderr,"Error %d while deleting file %s\n",ret,filename);
+   fprintf(stderr,"rpi_mqtt_sub2file_log2: Error %d while deleting file %s\n",ret,filename);
   return;
  }
  //=====PART 3: act on specific payloads========================
@@ -170,6 +175,28 @@ void mosq_msg_callback(struct mosquitto *mosq, void *userdata,
   if(ret!=0)
    fprintf(stdout,"Error %d while writing to file %s\n",ret,filename);
   return;
+ }
+ //-----if payload 'version': send version of this program------
+ if((strcmp(message->payload, "version")==0) ||
+    (strcmp(message->payload, "Version")==0))
+ {
+  //-----publish answer-----------------------------------------
+  ret=mosquitto_publish(mosq, NULL,_ANSWER_TOPIC_,
+  strlen(_VERSION_), _VERSION_, 0, 0);
+  if(ret!=0)
+  {
+   if(prt) fprintf(stderr, "Could not send answer. MQTT send error=%i\n",ret);
+  }
+  return;
+ }
+ //-----if payload 'end': terminate this program----------------
+ if(strcmp(message->payload, _END_)==0)
+ {
+  //.....clean up...............................................
+  mosquitto_destroy(mosq);
+  mosquitto_lib_cleanup();
+  if(prt) fprintf(stdout, "Program terminated by payload 'end'.\n");
+  exit(0);
  }
  //=====PART 4: all other payloads============================== 
  ret=writeline(filename, message->payload);
@@ -247,7 +274,7 @@ int main(int argc, char *argv[])
  //-----prepair exit main loop with <ctrl>c---------------------
  signal(SIGINT, my_signal_handler);
  //-----delete all files in directory---------------------------
- sprintf(filename, "rm -f %s*", _PATH_);
+ sprintf(filename, "rm -f -r -d %s*", _PATH_);
  ret=system(filename); 
  if(ret) fprintf(stderr, "Fehler %d beim Löschen der Dateien\n",ret);
  //-----init network and mqtt-----------------------------------
