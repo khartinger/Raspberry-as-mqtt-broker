@@ -187,6 +187,7 @@ void fSendSms(std::string phone, std::string text)
  if(_DEBUG_) std::cout<<"{fSendSms thread started}" <<std::endl;
  std::string s1;
  bool   bRetain=false;
+ bool   bRet;
  //-----------wait for modem to be ready or 180secs-------------
  int watchdog1=120;
  while(g_smsBusy && watchdog1>0)
@@ -203,12 +204,15 @@ void fSendSms(std::string phone, std::string text)
    s1="SMS NOT sent #2: Unauthorized number ("+phone+")";
   } else {
    Gsm gsm_=Gsm(conf.getDevice());
-   if(!gsm_.isReady()) {
-    s1="SMS NOT sent #3: "+gsm_.getsStatus()+" ("+phone+": "+text+")";
+   std::this_thread::sleep_for(std::chrono::milliseconds(100));
+   if(!gsm_.isModule()) {
+     s1="SMS NOT sent #3: "+gsm_.getsStatus()+" ("+phone+": "+text+")";
    } else {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
     if(!gsm_.begin()) {
      s1="SMS NOT sent #4: "+gsm_.getsStatus()+" ("+phone+": "+text+")";
     } else {
+     std::this_thread::sleep_for(std::chrono::milliseconds(100));
      if(gsm_.sendSms(phone, text)) {
       s1="SMS sent ("+phone+": "+text+")";
      } else {
@@ -390,6 +394,12 @@ int main(int argc, char **argv)
  std::thread mythread1(myMQTTperiodicExec, "");
  mythread1.detach();
  //------send start infos---------------------------------------
+ if(conf.getStartTopic().length()>1) 
+ {//.....MQTT: publish start message............................
+  s1=conf.getStartPayload();
+  if(conf.getAddTime()) s1+=" ("+getDateTime()+")";
+  g_myMosq.publish(conf.getStartTopic(), s1,true);
+ }
  g_smsBusy=false;                      // modem ready for sms
  if(conf.getStartSmsPhone().length()>2) 
  {//.....SMS: send start SMS....................................
@@ -397,12 +407,6 @@ int main(int argc, char **argv)
   if(conf.getAddTime()) s1+=" ("+getDateTime()+")";
   std::thread threadSms(fSendSms, conf.getStartSmsPhone(), s1);
   threadSms.detach();
- }
- if(conf.getStartTopic().length()>1) 
- {//.....MQTT: publish start message............................
-  s1=conf.getStartPayload();
-  if(conf.getAddTime()) s1+=" ("+getDateTime()+")";
-  g_myMosq.publish(conf.getStartTopic(), s1,true);
  }
  //------endless loop #1: wait for mqtt messages----------------
  // Edit an arrived message in MyMosquitto::onMessage
