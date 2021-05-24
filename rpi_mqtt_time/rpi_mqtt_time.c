@@ -1,4 +1,4 @@
-// ___rpi_mqtt_time.c_____________171119-180807___K_Hartinger___
+// ___rpi_mqtt_time.c_____________171119-200125___K_Hartinger___
 // This command line program subscribes MQTT topic 'getTime'
 // and publishes topic 'brokertime' with message YYYYmmdd HHMMSS
 // * when 'version' is received, program sends its version number
@@ -18,16 +18,17 @@
 #define  _TOPIC_IN_          "getTime"
 #define  _TOPIC_OUT_         "brokertime"
 #define  _END_               "end"
-#define  _VERSION_           "Version 20180708"
+#define  _VERSION_           "Version 20200125 (20180708)"
 
 #define  _HOST_              "127.0.0.1"
-#define  _HOSTNAME_LEN_      128
+#define  _HOSTNAME_LEN_      256
 #define  _PORT_              1883
 #define  _KEEPALIVE_         60
 #define  _CLEAN_SESSION_     true
 
 bool prt=true;                    // true=printf, false=quiet
 struct mosquitto *mosq = NULL;
+char sNow[18];
 
 //_____handler for signal SIGxxx (e.g. <ctrl>c)_________________
 void my_signal_handler(int signum)
@@ -79,6 +80,17 @@ void mosq_msg_callback(struct mosquitto *mosq, void *userdata,
  const struct mosquitto_message *message)
 {
  int ret;
+ //=====PART 1: prepair topic name, show topic | payload========
+ if(message->topic==NULL) return;
+ if(strlen(message->topic)<1) return;
+ if(prt) printf("%s | %s\n", message->topic, message->payload);
+ //=====PART 2: check for empty payload=========================
+ if((message->payloadlen<1)||(message->payload==NULL))
+ {
+  if(prt) printf("rpi_mqtt_time: No Payload\n");
+  return;
+ }
+ //=====PART 3: act on specific payloads========================
  //-----if payload 'version': send version of this program------
  if((strcmp(message->payload, "version")==0) ||
     (strcmp(message->payload, "Version")==0))
@@ -101,20 +113,21 @@ void mosq_msg_callback(struct mosquitto *mosq, void *userdata,
   if(prt) fprintf(stdout, "Program terminated by payload 'end'.\n");
   exit(0);
  }
- //-----build time string---------------------------------------
- char sNow[18];
- time_t now_t;
- time(&now_t);
- struct tm* tm_=localtime(&now_t);
- strftime(sNow,16,"%Y%m%d %H%M%S\0",tm_);
- //strftime(sNow,18,"%d.%m.%y %H:%M:%S\0",tm_);
- //-----publish answer------------------------------------------
- ret=mosquitto_publish(mosq, NULL,_TOPIC_OUT_,
-  strlen(sNow), sNow, 0, 0);
- if(ret!=0)
- {
-  if(prt) fprintf(stderr, "Could not send answer. MQTT send error=%i\n",ret);
- }
+ //-----for any other payload-----------------------------------
+  time_t now_t;
+  time(&now_t);
+  struct tm* tm_=localtime(&now_t);
+  strftime(sNow,16,"%Y%m%d %H%M%S\0",tm_);
+  //strftime(sNow,18,"%d.%m.%y %H:%M:%S\0",tm_);
+  if(prt) fprintf(stdout, "%s\n",sNow);
+  //-----publish answer------------------------------------------
+  ret=mosquitto_publish(mosq, NULL,_TOPIC_OUT_,
+   strlen(sNow), sNow, 0, 0);
+  if(ret!=0)
+  {
+   if(prt) fprintf(stderr, "Could not send answer. MQTT send error=%i\n",ret);
+  }
+
  return;
 }
 
